@@ -58,7 +58,6 @@ def main():
     user_id = get_userid(USER_ID)
     unique_groups = list(get_unique_groups(user_id))
     user_groups = get_group_info(user_id)
-    print(user_groups)
     group_info = []
     for g in range(0, user_groups['count'] - 1):
         if unique_groups.count(user_groups['items'][g]['id']) > 0:
