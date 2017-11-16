@@ -1,33 +1,34 @@
-from pprint import pprint
 import time
 import json
 import requests
 
-ACCESS_TOKEN = ''
-USER_ID = 100000
+USER_ID = 'tim_leary'
+
+
+def api(method, params):
+    parameters = {
+        'access_token': '',
+        'v': '5.69',
+        }
+    parameters.update(params)
+    response = requests.get('https://api.vk.com/method/' + method + '.get', parameters)
+    return response
+
+
+def get_userid(user_id):
+    response = api('users', {'user_ids': user_id, 'fields': 'id'})
+    user_id = response.json()['response'][0]['id']
+    return user_id
 
 
 def get_friends(user_id):
-    params = {
-        'user_id': user_id,
-        'access_token': ACCESS_TOKEN,
-        'v': '5.69'
-    }
-    response = requests.get('https://api.vk.com/method/friends.get', params)
-    if user_id == 0:
-        friends = dict.fromkeys(response.json()['response']['items'])
-    else:
-        friends = response.json()['response']['items']
+    response = api('friends', {'user_id': user_id})
+    friends = response.json()['response']['items']
     return friends
 
 
 def get_groups(user_id):
-    params = {
-        'user_id': user_id,
-        'access_token': ACCESS_TOKEN,
-        'v': '5.69'
-    }
-    response = requests.get('https://api.vk.com/method/groups.get', params)
+    response = api('groups', {'user_id': user_id})
     groups = response.json()['response']['items']
     return groups
 
@@ -35,40 +36,38 @@ def get_groups(user_id):
 def get_unique_groups(user_id):
     friends = get_friends(user_id)
     main_groups = get_groups(user_id)
-    groups = []
+    groups = set()
     for f in friends:
         try:
-            groups += get_groups(f)
+            groups.update(get_groups(f))
             time.sleep(0.4)
             print('-')
         except KeyError:
             pass
-    unique_groups = set(main_groups) & set(groups)
+    unique_groups = set(main_groups).difference(groups)
     return unique_groups
 
 
-def get_group_info(group_id):
-    params = {
-        'group_id': group_id,
-        'access_token': ACCESS_TOKEN,
-        'fields': 'name',
-        'fields': 'members_count'
-    }
-    response = requests.get('https://api.vk.com/method/groups.getById', params)
-    group_info = response.json()['response'][0]
+def get_group_info(user_id):
+    response = api('groups', {'user_id': user_id, 'fields': 'members_count', 'extended': 1})
+    group_info = response.json()['response']
     return group_info
 
 
 def main():
-    unique_groups = get_unique_groups(USER_ID)
+    user_id = get_userid(USER_ID)
+    unique_groups = list(get_unique_groups(user_id))
+    user_groups = get_group_info(user_id)
+    print(user_groups)
     group_info = []
-    for g in unique_groups:
-        try:
-            group_info.append({'name': get_group_info(g)['name'], 'gid': g, 'members_count': get_group_info(g)['members_count']})
-            time.sleep(0.4)
-        except KeyError:
+    for g in range(0, user_groups['count'] - 1):
+        if unique_groups.count(user_groups['items'][g]['id']) > 0:
+            group_info.append(dict(
+                {'name': user_groups['items'][g]['name'], 'gid': user_groups['items'][g]['id'],
+                 'members_count': user_groups['items'][g]['members_count']}))
+        else:
             pass
-    with open('groups.json', 'w') as f:
-        json.dump(group_info, f)
+    with open('groups.json', 'w', encoding='utf-8') as f:
+        json.dump(group_info, f, ensure_ascii=False, indent=2)
 
 main()
