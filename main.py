@@ -2,7 +2,7 @@ import time
 import json
 import requests
 
-USER_ID = 'tim_leary'
+USER_ID = ''
 
 
 def api(method, params):
@@ -11,25 +11,25 @@ def api(method, params):
         'v': '5.69',
         }
     parameters.update(params)
-    response = requests.get('https://api.vk.com/method/' + method + '.get', parameters)
-    return response
+    response = requests.get('https://api.vk.com/method/{}'.format(method), parameters)
+    return response.json()['response']
 
 
 def get_userid(user_id):
-    response = api('users', {'user_ids': user_id, 'fields': 'id'})
-    user_id = response.json()['response'][0]['id']
+    response = api('users.get', {'user_ids': user_id, 'fields': 'id'})
+    user_id = response[0]['id']
     return user_id
 
 
 def get_friends(user_id):
-    response = api('friends', {'user_id': user_id})
-    friends = response.json()['response']['items']
+    response = api('friends.get', {'user_id': user_id})
+    friends = response['items']
     return friends
 
 
 def get_groups(user_id):
-    response = api('groups', {'user_id': user_id})
-    groups = response.json()['response']['items']
+    response = api('groups.get', {'user_id': user_id})
+    groups = response['items']
     return groups
 
 
@@ -49,8 +49,7 @@ def get_unique_groups(user_id):
 
 
 def get_group_info(user_id):
-    response = api('groups', {'user_id': user_id, 'fields': 'members_count', 'extended': 1})
-    group_info = response.json()['response']
+    group_info = api('groups.get', {'user_id': user_id, 'fields': 'members_count', 'extended': 1})
     return group_info
 
 
@@ -59,11 +58,9 @@ def main():
     unique_groups = list(get_unique_groups(user_id))
     user_groups = get_group_info(user_id)
     group_info = []
-    for g in range(0, user_groups['count'] - 1):
-        if unique_groups.count(user_groups['items'][g]['id']) > 0:
-            group_info.append(dict(
-                {'name': user_groups['items'][g]['name'], 'gid': user_groups['items'][g]['id'],
-                 'members_count': user_groups['items'][g]['members_count']}))
+    for g in user_groups['items']:
+        if g['id'] in unique_groups:
+            group_info.append(dict(name=g['name'], gid=g['id'], members_count=g['members_count']))
         else:
             pass
     with open('groups.json', 'w', encoding='utf-8') as f:
