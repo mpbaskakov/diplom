@@ -61,8 +61,6 @@ def main():
     for g in user_groups['items']:
         if g['id'] in unique_groups:
             group_info.append(dict(name=g['name'], gid=g['id'], members_count=g['members_count']))
-        else:
-            pass
     with open('groups.json', 'w', encoding='utf-8') as f:
         json.dump(group_info, f, ensure_ascii=False, indent=2)
 
